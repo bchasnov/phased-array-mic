@@ -19,7 +19,8 @@ module testfft(
 // parameter DATA_BITS = 8; // 0-255
 
 logic [7:0] sink_real;
-logic [3:0] fft_state;
+logic [3:0] inState;
+logic [3:0] outState;
 
 // inputs to the FFT module
 logic sink_sop; // indicates the start of the incoming FFT Frame
@@ -69,11 +70,11 @@ begin
 		sink_eop <= 1'b0;
 		sink_real <= 8'b0;
 		inputSampleAddr <= 9'b0;
-		fft_state <= S_SOP; // start of package
+		inState <= S_SOP; // start of package
 	end
 	else
 	begin
-		case(fft_state)
+		case(inState)
 			IN_STBY:
 				/// what do i do here?
 			
@@ -89,7 +90,7 @@ begin
 				sink_real <= inputSampleData;
 				// load the next address
 				inputSampleAddr <= 9'b1;
-				fft_state <= S_MID;
+				inState <= S_MID;
 			end
 			
 			IN_MID:
@@ -104,16 +105,16 @@ begin
 				
 				// if there's one left...
 				if(inputSampleAddr == 9'b1_1111_1110)
-					fft_state <= S_EOP;
+					inState <= S_EOP;
 				else
-					fft_state <= S_MID;
+					inState <= S_MID;
 			end
 			
 			IN_EOP:
 			begin
 				sink_eop <= 1'b1;
 				sink_real <= inputSampleData;
-				fft_state <= S_STBY;
+				inState <= S_STBY;
 			end
 		endcase
 	end
@@ -122,9 +123,22 @@ end
 // output stuff
 always @ (posedge clk)
 begin
-	case ()
-	if(source_ready)
-
+	if(~source_ready)
+	begin
+		//TODO: do something
+		outState <= S_SOP;
+	end
+	else
+	case (outState)
+		OUT_STBY:
+		
+		OUT_SOP:
+		
+		OUT_MID:
+		
+		OUT_EOP:
+		
+	endcase
 end
 
 ram512x8 myfftram(
