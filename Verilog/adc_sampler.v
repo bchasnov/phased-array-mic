@@ -1,4 +1,4 @@
-module #(parameter LOGCLKDIV) adc_sampler (
+module adc_sampler (
 	input logic clk,    // Clock from FPGA
 	output logic[2:0] chnl, // Channel selector to ADC
 	output logic n_convst, // (ON low) Start conversion on ADC
@@ -34,14 +34,14 @@ state_t state, next_state;
 // --------
 
 // Slow down system clock to obtain sampling clock
-logic[LOGCLKDIV+1:0] clockDiv = 0;
+logic[5:0] clockDiv = 0;
 always_ff @(posedge clk) begin
-	clockDiv <= clockDiv + 1;
+	clockDiv <= clockDiv + 5'b1;
 end
 
-assign stateClk = clockDiv[2]; // fastest clock, for switching states
-assign sampleClk = clockDiv[LOGCLKDIV-3]; // clock for reseting the FSM
-assign newSample = clockDiv[LOGCLKDIV-1]; // clock for indicating new samples are ready
+assign stateClk = clockDiv[0]; // fastest clock, for switching states
+assign sampleClk = clockDiv[3]; // clock for reseting the FSM
+assign newSample = clockDiv[5]; // clock for indicating new samples are ready
 
 
 // --------
@@ -106,7 +106,7 @@ always_comb begin
 		default: // shouldn't happen
 			{n_convst, n_cs, n_rd} = 3'b111;
 	endcase
-end;
+end
 
 
 // --------
@@ -116,7 +116,7 @@ end;
 always_ff @(posedge stateClk)
 	if (state == CHIP_SELECT) 
 		// load the next address at the chip_select stage
-		curr_channel <= curr_channel + 1;
+		curr_channel <= curr_channel + 2'b1;
 
 assign chnl = curr_channel;
 
@@ -137,5 +137,5 @@ always_ff @(negedge stateClk)
 		endcase;
 
 
-endmodule;
+endmodule
 
