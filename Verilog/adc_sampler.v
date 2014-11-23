@@ -16,7 +16,7 @@ module adc_sampler (
 // INTERNAL LOGIC
 logic stateClk; // rate of running the state machine
 logic sampleClk; // sampling clock (running 4x speed of newSample)
-logic [2:0] curr_channel = 2'b0; // current channel we're sampling
+logic [1:0] curr_channel = 2'b0; // current channel we're sampling
 
 typedef enum logic[3:0] {
 	START_CONV,
@@ -26,7 +26,7 @@ typedef enum logic[3:0] {
 	WAIT_TO_RESET
 	} state_t;
 
-state_t state, next_state;
+state_t state;
 
 
 // --------
@@ -34,14 +34,14 @@ state_t state, next_state;
 // --------
 
 // Slow down system clock to obtain sampling clock
-logic[5:0] clockDiv = 0;
+logic[9:0] clockDiv = 0;
 always_ff @(posedge clk) begin
-	clockDiv <= clockDiv + 5'b1;
+	clockDiv <= clockDiv + 10'b1;
 end
 
 assign stateClk = clockDiv[0]; // fastest clock, for switching states
-assign sampleClk = clockDiv[3]; // clock for reseting the FSM
-assign newSample = clockDiv[5]; // clock for indicating new samples are ready
+assign sampleClk = clockDiv[7]; // clock for resetting the FSM
+assign newSample = clockDiv[9]; // clock for indicating new samples are ready
 
 
 // --------
@@ -49,35 +49,31 @@ assign newSample = clockDiv[5]; // clock for indicating new samples are ready
 // --------
 
 // state register
-always_ff @(posedge stateClk)
-	state <= next_state;
-
-// next state logic
-always_comb begin
+always_ff @(posedge stateClk) begin
 	case (state)
 		START_CONV: 
-			next_state = WAIT_FOR_EOC;
+			state <= WAIT_FOR_EOC;
 
 		WAIT_FOR_EOC:
 			if (~n_eoc)
-				next_state = CHIP_SELECT;
+				state <= CHIP_SELECT;
 			else
-				next_state = WAIT_FOR_EOC;
+				state <= WAIT_FOR_EOC;
 
 		CHIP_SELECT: 
-			next_state = READ_DATA;
+			state <= READ_DATA;
 
 		READ_DATA:
-			next_state = WAIT_TO_RESET;
+			state <= WAIT_TO_RESET;
 
 		WAIT_TO_RESET: 
 			if (sampleClk) 
-				next_state = START_CONV;
+				state <= START_CONV;
 			else
-				next_state = WAIT_TO_RESET;
+				state <= WAIT_TO_RESET;
 
 		default: // shouldn't happen
-			next_state = WAIT_TO_RESET;
+			state <= WAIT_TO_RESET;
 	endcase
 end
 
@@ -113,12 +109,11 @@ end
 // CHANNEL SWITCHING
 // --------
 
-always_ff @(posedge stateClk)
-	if (state == CHIP_SELECT) 
-		// load the next address at the chip_select stage
-		curr_channel <= curr_channel + 2'b1;
+always_ff @(negedge n_cs)
+	// load the next address at the chip_select stage
+	curr_channel <= curr_channel + 2'b1;
 
-assign chnl = curr_channel;
+assign chnl = {1'b0, curr_channel}; // only using 4 out of 8 channels
 
 
 // --------
@@ -134,8 +129,7 @@ always_ff @(negedge stateClk)
 			2'd2: ch2 = adc_in;
 			2'd3: ch3 = adc_in;
 			default: ch0 = adc_in;
-		endcase;
+		endcase
 
 
 endmodule
-
