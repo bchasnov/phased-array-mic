@@ -15,15 +15,17 @@ module adc_sampler (
 
 // INTERNAL LOGIC
 logic stateClk; // rate of running the state machine
-logic sampleClk; // sampling clock (running 4x speed of newSample)
-logic [1:0] curr_channel = 2'b0; // current channel we're sampling
+logic sampleClk; // sampling clock
+reg [1:0] curr_channel = 2'b0; // current channel we're sampling
 
 typedef enum logic[3:0] {
 	START_CONV,
 	WAIT_FOR_EOC, 
 	CHIP_SELECT, // load in next address
 	READ_DATA,
-	WAIT_TO_RESET
+	WAIT_TO_RESET,
+	DECIDE_TO_RESET,
+	STANDBY
 	} state_t;
 
 state_t state;
@@ -40,8 +42,12 @@ always_ff @(posedge clk) begin
 end
 
 assign stateClk = clockDiv[0]; // fastest clock, for switching states
-assign sampleClk = clockDiv[7]; // clock for resetting the FSM
-assign newSample = clockDiv[9]; // clock for indicating new samples are ready
+
+logic oldSampleClk = 1'b0;
+always_ff @(posedge stateClk)
+	oldSampleClk <= clockDiv[9];
+
+assign sampleClk = clockDiv[9]; // clock for indicating new samples are ready
 
 
 // --------
@@ -67,13 +73,24 @@ always_ff @(posedge stateClk) begin
 			state <= WAIT_TO_RESET;
 
 		WAIT_TO_RESET: 
-			if (sampleClk) 
-				state <= START_CONV;
+			state <= DECIDE_TO_RESET;
+		
+		DECIDE_TO_RESET:
+			if (chnl == 2'b0) begin // if we've sampled the four channels:
+				newSample <= 1'b1;
+				state <= STANDBY;
+			end
 			else
-				state <= WAIT_TO_RESET;
-
-		default: // shouldn't happen
-			state <= WAIT_TO_RESET;
+				state <= START_CONV;
+		STANDBY: begin
+			newSample <= 1'b0;
+			if (sampleClk & ~oldSampleClk)
+				state <= START_CONV;
+		end	
+		default: begin
+			newSample <= 1'b0;
+			state <= STANDBY; // shouldn't happen
+		end
 	endcase
 end
 
@@ -97,6 +114,12 @@ always_comb begin
 			{n_convst, n_cs, n_rd} = 3'b100;
 
 		WAIT_TO_RESET: 
+			{n_convst, n_cs, n_rd} = 3'b111;
+			
+		DECIDE_TO_RESET:
+			{n_convst, n_cs, n_rd} = 3'b111;
+		
+		STANDBY:
 			{n_convst, n_cs, n_rd} = 3'b111;
 
 		default: // shouldn't happen
@@ -124,11 +147,11 @@ assign chnl = {1'b0, curr_channel}; // only using 4 out of 8 channels
 always_ff @(negedge stateClk)
 	if (state == READ_DATA)
 		case (curr_channel)
-			2'd0: ch0 = adc_in;
-			2'd1: ch1 = adc_in;
-			2'd2: ch2 = adc_in;
-			2'd3: ch3 = adc_in;
-			default: ch0 = adc_in;
+			2'd0: ch3 <= adc_in;
+			2'd1: ch0 <= adc_in;
+			2'd2: ch1 <= adc_in;
+			2'd3: ch2 <= adc_in;
+			default: ch0 <= adc_in;
 		endcase
 
 
