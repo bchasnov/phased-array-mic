@@ -15,31 +15,19 @@ logic[11:0] addr = 12'b0;
 
 adc_sampler sampler(clk, chnl, n_convst, n_eoc, n_cs, n_rd, adc_in, ch0, ch1, ch2, ch3, newSample);
 
-assign leds = ch0;
+assign leds = q;
 
 
-always_ff @(posedge newSample)
+always_ff @(negedge newSample)
 	addr <= addr + 12'b1;
-	
-/*always_ff @(posedge clk)
-	if (~newSample) 
-		if (~written) begin
-			wren <= 1'b1;
-			written <= 1'b1;
-		end
-		else
-			wren <= 1'b0;
-	else 
-		written <= 1'b0;
-		*/
 
 	
 
 ram4096x8 myram(
 	.address(addr),
-	.clock(clk),
+	.clock(newSample),
 	.data(ch0),
-	.wren(newSample),
+	.wren(1'b1),
 	.q(q) 
 );
 
