@@ -45,9 +45,9 @@ assign stateClk = clockDiv[0]; // fastest clock, for switching states
 
 logic oldSampleClk = 1'b0;
 always_ff @(posedge stateClk)
-	oldSampleClk <= clockDiv[9];
+	oldSampleClk <= clockDiv[8];
 
-assign sampleClk = clockDiv[9]; // clock for indicating new samples are ready
+assign sampleClk = clockDiv[8]; // clock for indicating new samples are ready
 
 
 // --------
