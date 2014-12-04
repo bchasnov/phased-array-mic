@@ -1,4 +1,4 @@
-module top(input logic clk,
+module argmax_test(input logic clk,
 			  input logic start,
 			  output logic[7:0] maxIndex);
 
@@ -25,7 +25,7 @@ argmax #(8,9) argmax_inst(
 	.data(qa),
 	.max(max),
 	.maxIndex(maxaddr),
-	.done(done)
+	.valid(done)
 	);
 
 assign maxIndex = maxaddr[7:0];	
