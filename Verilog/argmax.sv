@@ -14,13 +14,7 @@ module argmax #(parameter DATA_WIDTH = 8, parameter ADDR_WIDTH = 12) (
 	
 // INTENRAL LOGIC
 // ram indices
-logic [ADDR_WIDTH-1:0] i = 0;
-assign dataAddr = i;
-/*
-// running maximi and argmaximi
-logic [DATA_WIDTH-1:0] max1,max2,max3,max4, max12, max34;
-logic [ADDR_WIDTH-1:0] argmax1,argmax2,argmax3,argmax4, argmax12, argmax34;
-*/
+logic [ADDR_WIDTH-1:0] lastAddr;
 
 // state info
 typedef enum logic[1:0] {
@@ -33,7 +27,7 @@ state_t state = WAIT_TO_START;
 state_t next_state;
 
 // STATE LOGIC
-always_ff @(negedge clk) begin
+always_ff @(posedge clk) begin
 	state <= next_state;
 end
 
@@ -43,7 +37,7 @@ always_comb begin
 		WAIT_TO_START:
 			next_state = (start) ? COMPUTE : WAIT_TO_START;
 		COMPUTE:
-			next_state = (i == 0) ? DONE : COMPUTE;
+			next_state = (dataAddr == 0) ? DONE : COMPUTE;
 		DONE:
 			next_state = WAIT_TO_START;
 	endcase
@@ -55,9 +49,10 @@ always_ff @(posedge clk) begin
 		valid <= 1'b0;
 		if (data > max) begin
 			max <= data;
-			maxIndex <= i;
+			maxIndex <= lastAddr;
 		end
-		i <= i + 1;
+		dataAddr <= dataAddr + 1; // increment address
+		lastAddr <= dataAddr;
 	end
 	if (state == DONE) begin
 		valid <= 1'b1;
