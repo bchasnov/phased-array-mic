@@ -1,4 +1,5 @@
-module adc8x512(input logic clk,
+module adc8x512(
+	input logic clk,
 	output logic[2:0] chnl, // Channel selector to ADC
 	output logic n_convst, // (ON low) Start conversion on ADC
 	input logic n_eoc, // (ON low) Input signal indicating EOC from ADC
@@ -26,7 +27,7 @@ state_t next_state;
 
 // STATE LOGIC
 always_ff @(posedge clk, posedge start) begin
-	if(start && (state==WAIT_TO_START) )
+	if( start )
 		state <= COMPUTE;
 	else
 		state <= next_state;
@@ -38,7 +39,7 @@ always_comb begin
 		WAIT_TO_START:
 			next_state = (start) ? COMPUTE : WAIT_TO_START;
 		COMPUTE:
-			next_state = (w_addr == 0) ? DONE : COMPUTE;
+			next_state = (w_addr == {9{1'b1}}) ? DONE : COMPUTE;
 		DONE:
 			next_state = WAIT_TO_START;
 	endcase
@@ -50,10 +51,12 @@ always_ff @(posedge newSample) begin
 		doneWriting <= 1'b0;
 		w_addr <= w_addr + 1; // increment address
 	end
-	if (state == DONE) begin
+	if (state == DONE || state == WAIT_TO_START) begin
 		doneWriting <= 1'b1;
 	end
 end
+
+assign wren = (state == COMPUTE);
 
 adc_sampler sampler(
 	.clk(clk), 
