@@ -46,18 +46,18 @@ always_comb begin
 		WAIT_TO_START:
 			next_state = (start) ? COMPUTE : WAIT_TO_START;
 		INCREMENT_N: 
-			next_state = (n == 0) ? DONE : COMPUTE;
+			next_state = (n == {OUT_ADDR_WIDTH{1'b1}}) ? DONE : COMPUTE;
 		COMPUTE:
-			next_state = (i == 0) ? INCREMENT_N : COMPUTE;
+			next_state = (i == {OUT_ADDR_WIDTH{1'b1}}) ? INCREMENT_N : COMPUTE;
 		DONE:
-			next_state = WAIT_TO_START;
+			next_state = (start) ? DONE : WAIT_TO_START;
 	endcase
 end
 
 assign a_addr = n+i;
 assign b_addr = ({1'b1,{OUT_ADDR_WIDTH{1'b0}}} - n) + i;
 
-mult mymult(a_data, b_data, product);
+mult8x8 mymult(a_data, b_data, product);
 
 
 assign s_addr = n; // we always compute the nth term in the output signal
@@ -65,15 +65,18 @@ assign s_addr = n; // we always compute the nth term in the output signal
 // COMPUTING LOGIC
 always_ff @(negedge clk) begin
 	if (state == INCREMENT_N) begin
+		//valid <= 1'b0;
 		result <= 0; // reset result
 		n <= n + 1;
+		i <= 0;
 	end
 	if (state == COMPUTE) begin
 		result <= result + product; 
 		i <= i + 1;
 	end
 	if (state == DONE) begin
-		valid <= 1'b1;
+		//valid <= 1'b1;
+		n <= 0;
 	end
 end
 
@@ -81,5 +84,6 @@ end
 // write the top bits of result to output, only during the compute stage
 assign s_data = result[2*DATA_WIDTH+OUT_ADDR_WIDTH-3:DATA_WIDTH+OUT_ADDR_WIDTH-2];
 assign s_wren = (state == COMPUTE);
+assign valid = (state == DONE);
 	
 endmodule
