@@ -16,48 +16,6 @@ module adc8x512(
 
 logic newSample; // clock running at overall sampling rate
 
-typedef enum logic[1:0] {
-	WAIT_TO_START,
-	COMPUTE,
-	DONE
-} state_t;
-
-state_t state = WAIT_TO_START;
-state_t next_state;
-
-// STATE LOGIC
-always_ff @(posedge clk, posedge start) begin
-	if( start )
-		state <= COMPUTE;
-	else
-		state <= next_state;
-end
-
-// state transitions
-always_comb begin
-	case (state)
-		WAIT_TO_START:
-			next_state = (start) ? COMPUTE : WAIT_TO_START;
-		COMPUTE:
-			next_state = (w_addr == {9{1'b1}}) ? DONE : COMPUTE;
-		DONE:
-			next_state = WAIT_TO_START;
-	endcase
-end
-
-// COMPUTING LOGIC
-always_ff @(posedge newSample) begin
-	if (state == COMPUTE) begin
-		doneWriting <= 1'b0;
-		w_addr <= w_addr + 1; // increment address
-	end
-	if (state == DONE || state == WAIT_TO_START) begin
-		doneWriting <= 1'b1;
-	end
-end
-
-assign wren = (state == COMPUTE);
-
 adc_sampler sampler(
 	.clk(clk), 
 	.chnl(chnl), 
@@ -72,5 +30,55 @@ adc_sampler sampler(
 	.ch3(ch3), 
 	.newSample(newSample)
 );
+
+typedef enum logic[1:0] {
+	WAIT_TO_START,
+	COMPUTE,
+	DONE
+} state_t;
+
+state_t state = WAIT_TO_START;
+state_t next_state;
+
+// STATE LOGIC
+always_ff @(posedge clk) begin
+	state <= next_state;
+end
+
+// state transitions
+always_comb begin
+	case (state)
+		WAIT_TO_START:
+			next_state = (start) ? COMPUTE : WAIT_TO_START;
+		COMPUTE:
+			next_state = (w_addr == {9{1'b1}}) ? DONE : COMPUTE;
+		DONE:
+			next_state = (start) ? DONE : WAIT_TO_START;
+	endcase
+end
+
+/*
+always_ff @(posedge clk) begin
+	case (state)
+		WAIT_TO_START:
+			doneWriting <= 1'b0;
+		COMPUTE:
+			doneWriting <= 1'b0;
+		DONE:
+			doneWriting <= 1'b1;
+	endcase
+end
+*/
+
+// COMPUTING LOGIC
+always_ff @(posedge newSample) begin
+	if (state == COMPUTE)
+		w_addr <= w_addr + 1; // increment address
+	if (state == DONE)
+		w_addr <= 0;
+end
+
+assign wren = (state == COMPUTE);
+assign doneWriting = (state == DONE);
 
 endmodule
