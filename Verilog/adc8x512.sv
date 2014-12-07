@@ -7,8 +7,9 @@ module adc8x512(
 	output logic n_rd, // (ON low) initiate a read on ADC
 	input logic[7:0] adc_in, // data bits from the ADC
 	
-	input  logic start,
-	output logic doneWriting,    // held high while no more writes are needed
+	input  logic rst, // (re)start the sampling
+	output logic inStandby,   // held high while no more writes are needed
+	
 	output logic [8:0] w_addr, // write address
 	output logic wren, // write enabled
 	output logic [7:0] ch0, ch1, ch2, ch3 // 
@@ -32,53 +33,44 @@ adc_sampler sampler(
 );
 
 typedef enum logic[1:0] {
-	WAIT_TO_START,
+	START,
 	COMPUTE,
-	DONE
+	STANDBY
 } state_t;
 
-state_t state = WAIT_TO_START;
+state_t state = START;
 state_t next_state;
 
 // STATE LOGIC
 always_ff @(posedge clk) begin
-	state <= next_state;
+	if (rst)
+		state <= START;
+	else
+		state <= next_state;
 end
 
 // state transitions
 always_comb begin
 	case (state)
-		WAIT_TO_START:
-			next_state = (start) ? COMPUTE : WAIT_TO_START;
+		START:
+			next_state = COMPUTE;
 		COMPUTE:
-			next_state = (w_addr == {9{1'b1}}) ? DONE : COMPUTE;
-		DONE:
-			next_state = (start) ? DONE : WAIT_TO_START;
+			next_state = (w_addr == {9{1'b1}}) ? STANDBY : COMPUTE;
+		STANDBY:
+			next_state = STANDBY;
 	endcase
 end
-
-/*
-always_ff @(posedge clk) begin
-	case (state)
-		WAIT_TO_START:
-			doneWriting <= 1'b0;
-		COMPUTE:
-			doneWriting <= 1'b0;
-		DONE:
-			doneWriting <= 1'b1;
-	endcase
-end
-*/
 
 // COMPUTING LOGIC
-always_ff @(posedge newSample) begin
-	if (state == COMPUTE)
-		w_addr <= w_addr + 1; // increment address
-	if (state == DONE)
+always_ff @(negedge clk) begin
+	if (state == START)
 		w_addr <= 0;
+	// newSample lasts only for 1 clock cycle, we sample on the negedge of that cycle
+	if ((state == COMPUTE) && newSample) 
+		w_addr <= w_addr + 1; // increment address
 end
 
 assign wren = (state == COMPUTE);
-assign doneWriting = (state == DONE);
+assign inStandby = (state == STANDBY);
 
 endmodule
