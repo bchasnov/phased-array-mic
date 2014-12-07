@@ -63,16 +63,6 @@ ram8x512 buffer_b(
 always_comb 
 	case (state)
 		RA_WB: begin
-			addr_a = w_addr;
-			data_a = w_data;
-			wren_a = wren;
-			addr_b = r_addr;
-			data_b = 8'b0;
-			wren_b = 1'b0;
-			r_q = q_b;
-			goodToGo = 1'b0;
-		end
-		SWITCH1: begin // same as RB_WA with goodToGo on
 			addr_b = w_addr;
 			data_b = w_data;
 			wren_b = wren;
@@ -81,18 +71,18 @@ always_comb
 			wren_a = 1'b0;
 			r_q = q_a;
 			goodToGo = 1'b1;
+		end
+		SWITCH1: begin // same as RA_WB with goodToGo on
+			addr_a = w_addr;
+			data_a = w_data;
+			wren_a = wren;
+			addr_b = r_addr;
+			data_b = 8'b0;
+			wren_b = 1'b0;
+			r_q = q_b;
+			goodToGo = 1'b0;
 		end
 		RB_WA: begin
-			addr_b = w_addr;
-			data_b = w_data;
-			wren_b = wren;
-			addr_a = r_addr;
-			data_a = 8'b0;
-			wren_a = 1'b0;
-			r_q = q_a;
-			goodToGo = 1'b0;
-		end
-		SWITCH2: begin // same as RA_WB with goodToGo on
 			addr_a = w_addr;
 			data_a = w_data;
 			wren_a = wren;
@@ -101,6 +91,16 @@ always_comb
 			wren_b = 1'b0;
 			r_q = q_b;
 			goodToGo = 1'b1;
+		end
+		SWITCH2: begin // same as RB_WA with goodToGo on
+			addr_b = w_addr;
+			data_b = w_data;
+			wren_b = wren;
+			addr_a = r_addr;
+			data_a = 8'b0;
+			wren_a = 1'b0;
+			r_q = q_a;
+			goodToGo = 1'b0;
 		end
 	endcase
 
