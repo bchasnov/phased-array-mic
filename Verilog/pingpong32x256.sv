@@ -67,40 +67,40 @@ always_comb
 			data_a = w_data;
 			wren_a = wren;
 			addr_b = r_addr;
-			data_b = 8'b0;
+			data_b = 32'b0;
 			wren_b = 1'b0;
 			r_q = q_b;
-			goodToGo = 1'b0;
+			goodToGo = 1'b1;
 		end
 		SWITCH1: begin // same as RB_WA with goodToGo on
 			addr_b = w_addr;
 			data_b = w_data;
 			wren_b = wren;
 			addr_a = r_addr;
-			data_a = 8'b0;
+			data_a = 32'b0;
 			wren_a = 1'b0;
 			r_q = q_a;
-			goodToGo = 1'b1;
+			goodToGo = 1'b0;
 		end
 		RB_WA: begin
 			addr_b = w_addr;
 			data_b = w_data;
 			wren_b = wren;
 			addr_a = r_addr;
-			data_a = 8'b0;
+			data_a = 32'b0;
 			wren_a = 1'b0;
 			r_q = q_a;
-			goodToGo = 1'b0;
+			goodToGo = 1'b1;
 		end
 		SWITCH2: begin // same as RA_WB with goodToGo on
 			addr_a = w_addr;
 			data_a = w_data;
 			wren_a = wren;
 			addr_b = r_addr;
-			data_b = 8'b0;
+			data_b = 32'b0;
 			wren_b = 1'b0;
 			r_q = q_b;
-			goodToGo = 1'b1;
+			goodToGo = 1'b0;
 		end
 	endcase
 
