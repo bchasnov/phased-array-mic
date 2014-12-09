@@ -54,15 +54,22 @@ assign sampleClk = clockDiv[8]; // clock for indicating new samples are ready
 // STATE MACHINE MECHANICS
 // --------
 
+//logic [8:0] waitCount;
+
 // state register
 always_ff @(posedge stateClk) begin
 	case (state)
-		START_CONV: 
+		START_CONV: begin
+			//waitCount <= 0;
 			state <= WAIT_FOR_EOC;
-
+		end
 		WAIT_FOR_EOC:
-			if (~n_eoc)
+			/*if (waitCount[8])
 				state <= CHIP_SELECT;
+			else*/ if (~n_eoc) begin
+				state <= CHIP_SELECT;
+				//waitCount <= waitCount + 1;
+			end
 			else
 				state <= WAIT_FOR_EOC;
 
@@ -142,16 +149,19 @@ assign chnl = {1'b0, curr_channel}; // only using 4 out of 8 channels
 // --------
 // READING DATA
 // --------
+logic [7:0] normalized_data;
+
+assign normalized_data = adc_in + 8'h60;
 
 // read data slightly after telling ADC to provide data
 always_ff @(negedge stateClk)
 	if (state == READ_DATA)
 		case (curr_channel)
-			2'd0: ch3 <= adc_in;
-			2'd1: ch0 <= adc_in;
-			2'd2: ch1 <= adc_in;
-			2'd3: ch2 <= adc_in;
-			default: ch0 <= adc_in;
+			2'd0: ch3 <= normalized_data;
+			2'd1: ch0 <= normalized_data;
+			2'd2: ch1 <= normalized_data;
+			2'd3: ch2 <= normalized_data;
+			default: ch0 <= normalized_data;
 		endcase
 
 
