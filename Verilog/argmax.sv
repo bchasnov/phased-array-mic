@@ -30,7 +30,7 @@ state_t next_state;
 
 // STATE LOGIC
 always_ff @(posedge clk) begin
-	if(rst)
+	if (rst)
 		state <= START;
 	else
 		state <= next_state;
@@ -42,7 +42,8 @@ always_comb begin
 		START:
 			next_state = COMPUTE;
 		COMPUTE:
-			next_state = (dataAddr == {ADDR_WIDTH{1'b1}}) ? STANDBY : COMPUTE;
+			// end checking at n = 205
+			next_state = (dataAddr == {{(ADDR_WIDTH-8){1'b0}}, 8'd168}) ? STANDBY : COMPUTE; // used to be {ADDR_WIDTH{1'b1}}
 		STANDBY:
 			next_state = STANDBY;
 	endcase
@@ -59,7 +60,7 @@ always_ff @(posedge clk) begin
 		lastAddr <= dataAddr;
 	end
 	if (state == START) begin
-		dataAddr <= 0;
+		dataAddr <= {{(ADDR_WIDTH-8){1'b0}}, 8'd88};// start checking at n = 88
 		max <= {1'b1, {(DATA_WIDTH-1){1'b0}}};
 		maxIndex <= 0;
 	end
