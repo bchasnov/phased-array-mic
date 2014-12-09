@@ -7,6 +7,8 @@ module top (
 	output logic n_rd, // (ON low) initiate a read on ADC
 	input logic[7:0] adc_in, // data bits from the ADC
 	output logic[7:0] leds,
+	output sdi_pin,
+	input sck_pin, 
 	output logic everyoneInStandby,
 	output logic xcorrInStandby, samplerInStandby, argmaxInStandby,
 	output logic pingpongState0, pingpongState1,
@@ -18,7 +20,7 @@ logic[8:0] w_addr = 9'b0;
 logic wren;
 
 assign everyoneInStandby = xcorrInStandby & samplerInStandby & argmaxInStandby;
-		
+
 
 adc8x512 sampler(
 	.clk(clk),
@@ -81,6 +83,38 @@ argmax #(32,8) argmax_inst (
 	.inStandby(argmaxInStandby)
 );
 
+logic [31:0] i;
+logic [63:0] spi_data;
+
+always_ff @(posedge everyoneInStandby)
+begin
+	i <= i +2;
+	//spi_data <= {i, i+1};// max_addr_result, max_data_result[23:0]};
+end
+
+//always_ff @(posedge argmaxInStandby)
+assign spi_data = {32'hdeadbeef, max_addr_result, max_data_result[23:0]};
+
+
+
+spi_slave myspi (
+.sck(sck_pin), // from master 
+.sdo(), // from master
+.sdi(sdi_pin), // to master
+.reset(rst),
+.d(spi_data), // data to send 
+.q()); // data received.. not used
+
+/*
+spimaster myspi (
+	.clk(clk),
+	.rst(0),
+	.sck_signal(sck_pin),
+	.sda(sda_pin),
+	.buffer_temp(max_data_result),
+	.send(argmaxInStandby) //send buffer on posedge
+	);*/
+
 pingpong8x512 pingpong0(
 	.clk(clk),
 	.r_addr(a_addr), // read address
@@ -141,11 +175,8 @@ always_ff @(posedge everyoneInStandby)
 
 // assign LEDS
 assign leds[0] = everyoneInStandby;
-
 assign leds[1] = ^ch2 & ^ch3; // to prevent quartus from being too smart
-
-assign leds[4:2] = max_addr_result[2:0];
-
+assign leds[4:2] = max_addr_result[4:2];
 assign leds[7:5] = ch0[7:5];
 
 
